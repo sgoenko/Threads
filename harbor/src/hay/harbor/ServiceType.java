@@ -1,5 +1,5 @@
 package hay.harbor;
 
-public enum Action {
+public enum ServiceType {
 	LOAD, UPLOAD
 }

@@ -7,12 +7,12 @@ import java.util.LinkedList;
 
 
 public class DockPool<T> {
-	private final static int POOL_SIZE = 3; // количество причалов в порту
-	private final Semaphore semaphore = new Semaphore(POOL_SIZE, true);
+	private final Semaphore semaphore;
 	private final Queue<Dock> terminals = new LinkedList<>();
 
 	public DockPool(Queue<Dock> source) {
 		terminals.addAll(source);
+		semaphore = new Semaphore(terminals.size(), true);
 	}
 
 	public Dock occupyDock(long maxWaitMillis) throws DockException {

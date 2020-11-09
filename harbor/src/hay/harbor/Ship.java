@@ -1,77 +1,103 @@
 package hay.harbor;
 
 public class Ship extends Thread {
-	private boolean active = false;
-	private DockPool<Dock> pool;
+	private boolean needService = false;
+	private Harbor harbor;
 	private String name;
 	private int capacity;
 	private int current;
-	private Action action;
+	private ServiceType serviceType;
 
-	public Ship(DockPool<Dock> pool, String name, int capacity, int current) {
-		this.pool = pool;
+	public Ship(Harbor harbor, String name, int capacity, int current) {
+		this.harbor = harbor;
 		this.name = name;
-		setCapacity(capacity);
-		setCurrent(current);
-		action = Action.UPLOAD;
-		active = true;
+		this.capacity = capacity;
+		this.current = current;
+		serviceType = ServiceType.UPLOAD;
+		needService = true;
 	}
 
-	public void setAction(Action action) {
-		this.action = action;
+	public void setAction(ServiceType action) {
+		this.serviceType = action;
 	}
 
 	public void run() {
-		Dock dock = null;
-		while (active) {
+		while (needService) {
+			service();
+		}
+	}
+
+	private void service() {
+		Dock dock = occupyDock();
+
+		if (dock != null) {
+			System.out.println(name + " occupied dock #" + dock.getId());
+			docking(dock);
+			System.out.println(name + " released dock #" + dock.getId());
+			harbor.releaseDock(dock);
+			if (serviceFinished()) {
+				needService = false;
+			}
+		} else {
 			try {
-				dock = pool.occupyDock(500);
-				System.out.println(name + " occupied dock #" + dock.getId());
-				dock.setShip(this);
-				if (action == Action.LOAD) {
-					while (current < capacity)
-						dock.loading();
+				sleep(500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			System.out.println(name + ": no docks available");
+		}
+	}
+
+	private void docking(Dock dock) {
+		if (serviceType == ServiceType.LOAD) {
+			while (current < capacity) {
+				if (dock.load()) {
+					load();
+				} else {
+					break;
 				}
-				if (action == Action.UPLOAD) {
-					while (current > 0)
-						dock.uploading();
-				}
-				active = false;
-			} catch (DockException e) {
-				System.out.println(name + " >> " + e.getMessage());
-			} finally {
-				if (dock != null) {
-					active = false;
-					System.out.println(name + " : " + dock.getId() + " dock released");
-					pool.releaseDock(dock);
+			}
+		} else {
+			while (current > 0) {
+				if (dock.upload()) {
+					upload();
+				} else {
+					break;
 				}
 			}
 		}
 	}
+	
+	private Dock occupyDock() {
+		if (serviceType == ServiceType.LOAD)
+			return harbor.occupyDockForLoad(500, capacity - current);
+		else
+			return harbor.occupyDockForUpload(500, current);
+	}
+
+	private boolean serviceFinished() {
+		if (serviceType == ServiceType.LOAD)
+			return current == capacity;
+		else
+			return current == 0;
+	}
 
 	public void load() {
 		current++;
-		System.out.println(action + " " + name + "+1. Total: " + current);
+		System.out.println(serviceType + " " + name + "+1. Total: " + current);
 	}
 
 	public void upload() {
 		current--;
-		System.out.println(action + " " + name + "-1. Total: " + current);
+		System.out.println(serviceType + " " + name + "-1. Total: " + current);
 	}
 
 	public int getCapacity() {
 		return capacity;
 	}
 
-	public void setCapacity(int capacity) {
-		this.capacity = capacity;
-	}
-
 	public int getCurrent() {
 		return current;
 	}
 
-	public void setCurrent(int current) {
-		this.current = current;
-	}
 }
