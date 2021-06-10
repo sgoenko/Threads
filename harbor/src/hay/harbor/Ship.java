@@ -1,12 +1,12 @@
 package hay.harbor;
 
 public class Ship extends Thread {
-	private boolean needService = false;
 	private Harbor harbor;
 	private String name;
 	private int capacity;
 	private int current;
 	private ServiceType serviceType;
+	private boolean needService = false;
 
 	public Ship(Harbor harbor, String name, int capacity, int current) {
 		this.harbor = harbor;

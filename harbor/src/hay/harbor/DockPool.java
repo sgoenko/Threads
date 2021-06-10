@@ -27,7 +27,7 @@ public class DockPool<T> {
 	}
 
 	public void releaseDock(Dock term) {
-		terminals.add(term); // возврат в пул
+		terminals.add(term); 
 		semaphore.release();
 	}
 }
