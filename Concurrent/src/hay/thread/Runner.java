@@ -2,24 +2,28 @@ package hay.thread;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 
 public class Runner {
+
+	ReentrantLock lock = new ReentrantLock();
 	int count = 0;
 
 	void increment() {
-		count = count + 1;
-	}
-
-	synchronized void syncIncrement() {
-		count = count + 1;
+		lock.lock();
+		try {
+			count++;
+		} finally {
+			lock.unlock();
+		}
 	}
 
 	public void run() throws InterruptedException {
-		ExecutorService executor = Executors.newFixedThreadPool(2);
+		ExecutorService executor = Executors.newFixedThreadPool(5);
 
 		IntStream.range(0, 10000)
-				.forEach(i -> executor.submit(this::syncIncrement));
+				.forEach(i -> executor.submit(this::increment));
 
 		ConcurrentUtils.stop(executor);
 
