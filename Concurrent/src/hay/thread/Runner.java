@@ -1,20 +1,37 @@
 package hay.thread;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 public class Runner {
+	int count = 0;
 
-	public static void main(String[] args) throws InterruptedException {
-		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+	void increment() {
+		count = count + 1;
+	}
 
-		Runnable task = () -> System.out.println("Scheduling: " + System.nanoTime());
-		ScheduledFuture<?> future = executor.schedule(task, 3, TimeUnit.SECONDS);
+	synchronized void syncIncrement() {
+		count = count + 1;
+	}
 
-		TimeUnit.MILLISECONDS.sleep(1337);
+	public void run() throws InterruptedException {
+		ExecutorService executor = Executors.newFixedThreadPool(2);
 
-		long remainingDelay = future.getDelay(TimeUnit.MILLISECONDS);
-		System.out.printf("Remaining Delay: %sms", remainingDelay);
+		IntStream.range(0, 10000)
+				.forEach(i -> executor.submit(this::syncIncrement));
+
+		ConcurrentUtils.stop(executor);
+
+		System.out.println(count);  // 9965
+	}
+
+	public static void main(String[] args) {
+		Runner runner = new Runner();
+		try {
+			runner.run();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }
