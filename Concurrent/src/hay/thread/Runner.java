@@ -1,31 +1,43 @@
 package hay.thread;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.IntStream;
 
 public class Runner {
 
 	public void run() throws InterruptedException {
 		ExecutorService executor = Executors.newFixedThreadPool(2);
-		ReentrantLock lock = new ReentrantLock();
+		Map<String, String> map = new HashMap<>();
+		ReadWriteLock lock = new ReentrantReadWriteLock();
 
 		executor.submit(() -> {
-			lock.lock();
+			lock.writeLock().lock();
 			try {
 				ConcurrentUtils.sleep(1);
+				map.put("foo", "bar");
 			} finally {
-				lock.unlock();
+				lock.writeLock().unlock();
 			}
 		});
 
-		executor.submit(() -> {
-			System.out.println("Locked: " + lock.isLocked());
-			System.out.println("Held by me: " + lock.isHeldByCurrentThread());
-			boolean locked = lock.tryLock();
-			System.out.println("Lock acquired: " + locked);
-		});
+		Runnable readTask = () -> {
+			lock.readLock().lock();
+			try {
+				System.out.println(map.get("foo"));
+				ConcurrentUtils.sleep(1);
+			} finally {
+				lock.readLock().unlock();
+			}
+		};
+
+		executor.submit(readTask);
+		executor.submit(readTask);
 
 		ConcurrentUtils.stop(executor);
 	}
