@@ -8,32 +8,26 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 
 public class Runner {
+	int count = 0;
 
 	public void run() throws InterruptedException {
 		ExecutorService executor = Executors.newFixedThreadPool(2);
 		StampedLock lock = new StampedLock();
 
 		executor.submit(() -> {
-			long stamp = lock.tryOptimisticRead();
+			long stamp = lock.readLock();
 			try {
-				System.out.println("Optimistic Lock Valid: " + lock.validate(stamp));
-				sleep(1);
-				System.out.println("Optimistic Lock Valid: " + lock.validate(stamp));
-				sleep(2);
-				System.out.println("Optimistic Lock Valid: " + lock.validate(stamp));
+				if (count == 0) {
+					stamp = lock.tryConvertToWriteLock(stamp);
+					if (stamp == 0L) {
+						System.out.println("Could not convert to write lock");
+						stamp = lock.writeLock();
+					}
+					count = 23;
+				}
+				System.out.println(count);
 			} finally {
 				lock.unlock(stamp);
-			}
-		});
-
-		executor.submit(() -> {
-			long stamp = lock.writeLock();
-			try {
-				System.out.println("Write Lock acquired");
-				sleep(2);
-			} finally {
-				lock.unlock(stamp);
-				System.out.println("Write done");
 			}
 		});
 
@@ -53,11 +47,9 @@ public class Runner {
 		try {
 			executor.shutdown();
 			executor.awaitTermination(60, TimeUnit.SECONDS);
-		}
-		catch (InterruptedException e) {
+		} catch (InterruptedException e) {
 			System.err.println("termination interrupted");
-		}
-		finally {
+		} finally {
 			if (!executor.isTerminated()) {
 				System.err.println("killing non-finished tasks");
 			}
