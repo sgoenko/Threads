@@ -29,5 +29,31 @@ public class Runner {
 		}
 
 
+		Callable task2 = () -> {
+			try {
+				TimeUnit.SECONDS.sleep(1);
+				return 123;
+			}
+			catch (InterruptedException e) {
+				throw new IllegalStateException("task interrupted", e);
+			}
+		};
+		ExecutorService executor2 = Executors.newFixedThreadPool(1);
+		Future<Integer> future = executor2.submit(task2);
+
+		System.out.println("future done? " + future.isDone());
+
+		Integer result = null;
+		try {
+			result = future.get();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
+
+		System.out.println("future done? " + future.isDone());
+		System.out.print("result: " + result);
+
 	}
 }
