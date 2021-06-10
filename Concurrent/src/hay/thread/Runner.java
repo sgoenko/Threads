@@ -4,39 +4,40 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.StampedLock;
 
 public class Runner {
 
 	public void run() throws InterruptedException {
 		ExecutorService executor = Executors.newFixedThreadPool(2);
-		Map<String, String> map = new HashMap<>();
 		StampedLock lock = new StampedLock();
+
+		executor.submit(() -> {
+			long stamp = lock.tryOptimisticRead();
+			try {
+				System.out.println("Optimistic Lock Valid: " + lock.validate(stamp));
+				sleep(1);
+				System.out.println("Optimistic Lock Valid: " + lock.validate(stamp));
+				sleep(2);
+				System.out.println("Optimistic Lock Valid: " + lock.validate(stamp));
+			} finally {
+				lock.unlock(stamp);
+			}
+		});
 
 		executor.submit(() -> {
 			long stamp = lock.writeLock();
 			try {
-				ConcurrentUtils.sleep(1);
-				map.put("foo", "bar");
+				System.out.println("Write Lock acquired");
+				sleep(2);
 			} finally {
-				lock.unlockWrite(stamp);
+				lock.unlock(stamp);
+				System.out.println("Write done");
 			}
 		});
 
-		Runnable readTask = () -> {
-			long stamp = lock.readLock();
-			try {
-				System.out.println(map.get("foo"));
-				ConcurrentUtils.sleep(1);
-			} finally {
-				lock.unlockRead(stamp);
-			}
-		};
-
-		executor.submit(readTask);
-		executor.submit(readTask);
-
-		ConcurrentUtils.stop(executor);
+		stop(executor);
 	}
 
 	public static void main(String[] args) {
@@ -45,6 +46,30 @@ public class Runner {
 			runner.run();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public static void stop(ExecutorService executor) {
+		try {
+			executor.shutdown();
+			executor.awaitTermination(60, TimeUnit.SECONDS);
+		}
+		catch (InterruptedException e) {
+			System.err.println("termination interrupted");
+		}
+		finally {
+			if (!executor.isTerminated()) {
+				System.err.println("killing non-finished tasks");
+			}
+			executor.shutdownNow();
+		}
+	}
+
+	public static void sleep(int seconds) {
+		try {
+			TimeUnit.SECONDS.sleep(seconds);
+		} catch (InterruptedException e) {
+			throw new IllegalStateException(e);
 		}
 	}
 }
