@@ -6,30 +6,15 @@ import java.util.concurrent.*;
 
 public class Runner {
 
-	static Callable callable(String result, long sleepSeconds) {
-		return () -> {
-			TimeUnit.SECONDS.sleep(sleepSeconds);
-			return result;
-		};
-	}
-
 	public static void main(String[] args) throws InterruptedException {
-		ExecutorService executor = Executors.newWorkStealingPool();
+		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
+		Runnable task = () -> System.out.println("Scheduling: " + System.nanoTime());
+		ScheduledFuture<?> future = executor.schedule(task, 3, TimeUnit.SECONDS);
 
-		List<Callable<String>> callables = Arrays.asList(
-				callable("task1", 2),
-				callable("task2", 1),
-				callable("task3", 3)
-		);
+		TimeUnit.MILLISECONDS.sleep(1337);
 
-		String result = null;
-		try {
-			result = executor.invokeAny(callables);
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-		}
-		System.out.println(result);
-
+		long remainingDelay = future.getDelay(TimeUnit.MILLISECONDS);
+		System.out.printf("Remaining Delay: %sms", remainingDelay);
 	}
 }
