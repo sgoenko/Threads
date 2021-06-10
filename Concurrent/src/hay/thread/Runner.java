@@ -31,7 +31,7 @@ public class Runner {
 
 		Callable task2 = () -> {
 			try {
-				TimeUnit.SECONDS.sleep(1);
+				TimeUnit.SECONDS.sleep(2);
 				return 123;
 			}
 			catch (InterruptedException e) {
@@ -44,11 +44,14 @@ public class Runner {
 		System.out.println("future done? " + future.isDone());
 
 		Integer result = null;
+
 		try {
-			result = future.get();
+			result = future.get(1, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} catch (ExecutionException e) {
+			e.printStackTrace();
+		} catch (TimeoutException e) {
 			e.printStackTrace();
 		}
 
