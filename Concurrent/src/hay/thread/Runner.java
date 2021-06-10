@@ -7,27 +7,27 @@ import java.util.stream.IntStream;
 
 public class Runner {
 
-	ReentrantLock lock = new ReentrantLock();
-	int count = 0;
-
-	void increment() {
-		lock.lock();
-		try {
-			count++;
-		} finally {
-			lock.unlock();
-		}
-	}
-
 	public void run() throws InterruptedException {
-		ExecutorService executor = Executors.newFixedThreadPool(5);
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+		ReentrantLock lock = new ReentrantLock();
 
-		IntStream.range(0, 10000)
-				.forEach(i -> executor.submit(this::increment));
+		executor.submit(() -> {
+			lock.lock();
+			try {
+				ConcurrentUtils.sleep(1);
+			} finally {
+				lock.unlock();
+			}
+		});
+
+		executor.submit(() -> {
+			System.out.println("Locked: " + lock.isLocked());
+			System.out.println("Held by me: " + lock.isHeldByCurrentThread());
+			boolean locked = lock.tryLock();
+			System.out.println("Lock acquired: " + locked);
+		});
 
 		ConcurrentUtils.stop(executor);
-
-		System.out.println(count);  // 9965
 	}
 
 	public static void main(String[] args) {
